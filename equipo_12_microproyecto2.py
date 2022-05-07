@@ -192,3 +192,5 @@ arrayState = np.array(censo_df['STNAME'].unique())
 print(len(arrayState))
 arrayCity = np.array(censo_df['CTYNAME'].unique())
 print(len(arrayCity))
+###
+prnit('hello world')
