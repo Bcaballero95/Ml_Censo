@@ -33,23 +33,21 @@ import pandas as pd
 import seaborn as sb
 from tabulate import tabulate 
 import matplotlib.pyplot as plt
+import plotly.express as px
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances_argmin_min
 import re
 
+%matplotlib inline
 from mpl_toolkits.mplot3d import Axes3D
 plt.rcParams['figure.figsize'] = (25, 12)
 plt.style.use('ggplot')
 
 from google.colab import files
 import io
-# %matplotlib inline
 
-
-
-"""Se van a separar los datos utilizados para realizar el clustering, para realizar esta separación se va a observar primero la relación que tienen las variables entre si.
 uploaded = files.upload()
 censo_df = pd.read_csv(io.BytesIO(uploaded["census.csv"]))
 
@@ -64,6 +62,9 @@ censo_df.shape
 """Como se puede observar el dataset cuenta con 100 columnas y con 3193 registros. """
 
 censo_df.columns
+
+"""Se van a separar los datos utilizados para realizar el clustering, para realizar esta separación se va a observar primero la relación que tienen las variables entre si.
+
 Cada una de las columnas se explicara a continuación 
 
 
@@ -154,6 +155,19 @@ promPOPESTIMATE.head()
 
 pd.concat([censo_df_Data, promPOPESTIMATE], axis = 1)
 
+lstprom =[]
+for i in censo_df.index:
+  prom = 0
+  for j in range (70,75):
+    s = censo_df.iloc[i][j]
+    out = re.sub(r'[^\w\s]','',s)
+    prom += int(out)
+  prom = prom/5
+  lstprom.append(prom)
+promRBIRTH=pd.DataFrame(lstprom, columns = ['PromRBIRTH'])
+censo_df_Data = pd.concat([censo_df_Data, promRBIRTH], axis = 1)
+censo_df_Data
+
 """gráficas de dispersión"""
 
 # Se va a realizar el gráfico de dispersión de la estimación de la población durante los cinco años 
@@ -192,5 +206,3 @@ arrayState = np.array(censo_df['STNAME'].unique())
 print(len(arrayState))
 arrayCity = np.array(censo_df['CTYNAME'].unique())
 print(len(arrayCity))
-###
-prnit('hello world')
