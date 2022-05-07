@@ -39,14 +39,17 @@ from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances_argmin_min
 import re
 
-# %matplotlib inline
 from mpl_toolkits.mplot3d import Axes3D
 plt.rcParams['figure.figsize'] = (25, 12)
 plt.style.use('ggplot')
 
 from google.colab import files
 import io
+# %matplotlib inline
 
+
+
+"""Se van a separar los datos utilizados para realizar el clustering, para realizar esta separación se va a observar primero la relación que tienen las variables entre si.
 uploaded = files.upload()
 censo_df = pd.read_csv(io.BytesIO(uploaded["census.csv"]))
 
@@ -61,9 +64,6 @@ censo_df.shape
 """Como se puede observar el dataset cuenta con 100 columnas y con 3193 registros. """
 
 censo_df.columns
-
-"""Se van a separar los datos utilizados para realizar el clustering, para realizar esta separación se va a observar primero la relación que tienen las variables entre si.
-
 Cada una de las columnas se explicara a continuación 
 
 
