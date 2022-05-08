@@ -16,14 +16,22 @@ Introducción a la Inteligencia Artificial
 ---
 **Integrantes:**
 
-* Sergio Páez
-* Samuel Huertas
-* Brayan Caballero
+---
+
+ Sergio Páez
+ 
+---
+
+ Samuel Huertas
+ 
+---
+
+ Brayan Caballero
 
 ---
 </center>
 
-## Carga del data set
+## 1. Carga del data set
 """
 
 # Commented out IPython magic to ensure Python compatibility.
@@ -33,14 +41,20 @@ import pandas as pd
 import seaborn as sb
 from tabulate import tabulate 
 import matplotlib.pyplot as plt
-import plotly.express as px
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import pairwise_distances_argmin_min
 import re
+import plotly.express as px
+import plotly.graph_objects as go
+from sklearn.cluster import AgglomerativeClustering
 
-%matplotlib inline
+
+# %matplotlib inline
+from mpl_toolkits.mplot3d import Axes3D
+
+# %matplotlib inline
 from mpl_toolkits.mplot3d import Axes3D
 plt.rcParams['figure.figsize'] = (25, 12)
 plt.style.use('ggplot')
@@ -51,7 +65,7 @@ import io
 uploaded = files.upload()
 censo_df = pd.read_csv(io.BytesIO(uploaded["census.csv"]))
 
-"""## Visualización del dataset"""
+"""## 2. Visualización del dataset"""
 
 censo_df.head()
 
@@ -63,48 +77,95 @@ censo_df.shape
 
 censo_df.columns
 
-"""Se van a separar los datos utilizados para realizar el clustering, para realizar esta separación se va a observar primero la relación que tienen las variables entre si.
+# Verificación si existen valores NaN en el dataset 
+hayNaN = pd.isna(censo_df)
 
-Cada una de las columnas se explicara a continuación 
+contador = 0 
 
+for i in censo_df:
+  for j in hayNaN[i]:
+    if j == True:
+      contador +=1
 
-*   SUMLEV: es un codigo que utiliza la oficina de censo que indica el tipo geografico. 
-*   REGION: territorio donde se realizaron los censos
-*   DIVISION: las divisiones censales son agrupaciones de estados que son subdivisiones de las cuatro regiones censales. Hay nueve divisiones censales, que la Oficina del Censo de EE.UU. adoptó en 1910 para la presentación de los datos. Cada división censal se identifica con un código censal de dos dígitos.
-*   STATE: es el número del estado.
-*   COUNTY: es la divición primaria que se realiza en algunos estados. 
-*   STNAME: nombre del estado.
-*   CTYNAME: nombre de la ciudad. 
-*   CENSUS2010POP: es el censo poblacional realizado en el 2010
-*   ESTIMATEBASE2010:
-*   POPESTIMATE:
-*   NPOPCHG:
-*   BIRTHS:
-*   DEATHS:
-*   NATURALINC:
-*   INTERNATIONALMIG:
-*   EDOMESTICMIG:
-*   NETMIG:
-*   RESIDUAL:
-*   GQESTIMATEBASE:
-*   RBIRTH:
-*   RDEATH:
-*   RNATURALINC:
-*   RINTERATIONALMIG:
-*   RDOMESTICMIG:
-*   RNETMIG:
+print(contador)
 
-## Pre-Procesamiento
+"""Como se puede observar no hay valores NaN dentro del dataset
+
+## 3. Pre-Procesamiento
+
+### *Análisis de todas las variables del data set*
 """
 
 # Se eliminan las columnas con las que no se va a trabajar
-# Las columnas seleccionadas para trabajar son STNAME	CTYNAME	POPESTIMATE2010	POPESTIMATE2011	POPESTIMATE2012	POPESTIMATE2013	POPESTIMATE2014	POPESTIMATE2015
+# Las columnas seleccionadas para trabajar son STNAME	POPESTIMATE	RBIRTHS
 
-censo_df_Data=censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY',
+censo_df_Data=censo_df.drop(['POPESTIMATE2011', 'POPESTIMATE2012', 'POPESTIMATE2013',
+       'POPESTIMATE2014', 'POPESTIMATE2015', 'NPOPCHG_2011',
+       'NPOPCHG_2012', 'NPOPCHG_2013', 'NPOPCHG_2014', 'NPOPCHG_2015',
+       'BIRTHS2011', 'BIRTHS2012', 'BIRTHS2013', 'BIRTHS2014',
+       'BIRTHS2015', 'DEATHS2011', 'DEATHS2012', 'DEATHS2013',
+       'DEATHS2014', 'DEATHS2015', 'NATURALINC2011',
+       'NATURALINC2012', 'NATURALINC2013', 'NATURALINC2014', 'NATURALINC2015',
+       'INTERNATIONALMIG2011', 'INTERNATIONALMIG2012',
+       'INTERNATIONALMIG2013', 'INTERNATIONALMIG2014', 'INTERNATIONALMIG2015',
+       'DOMESTICMIG2011', 'DOMESTICMIG2012',
+       'DOMESTICMIG2013', 'DOMESTICMIG2014', 'DOMESTICMIG2015',
+       'NETMIG2011', 'NETMIG2012', 'NETMIG2013', 'NETMIG2014', 'NETMIG2015',
+       'RESIDUAL2011', 'RESIDUAL2012', 'RESIDUAL2013',
+       'RESIDUAL2014', 'RESIDUAL2015', 'GQESTIMATESBASE2010',
+       'GQESTIMATES2011', 'GQESTIMATES2012',
+       'GQESTIMATES2013', 'GQESTIMATES2014', 'GQESTIMATES2015',
+       'RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014', 'RBIRTH2015',
+       'RDEATH2012', 'RDEATH2013', 'RDEATH2014', 'RDEATH2015',
+       'RNATURALINC2012', 'RNATURALINC2013',
+       'RNATURALINC2014', 'RNATURALINC2015',
+       'RINTERNATIONALMIG2012', 'RINTERNATIONALMIG2013',
+       'RINTERNATIONALMIG2014', 'RINTERNATIONALMIG2015',
+       'RDOMESTICMIG2012', 'RDOMESTICMIG2013', 'RDOMESTICMIG2014',
+       'RDOMESTICMIG2015', 'RNETMIG2012', 'RNETMIG2013',
+       'RNETMIG2014', 'RNETMIG2015'],axis=1)
+
+# Se asigna un número a cada estado de los 51 estados registrados en el data set
+# se asigna un número a cada ciudad de los 3193 ciudades registrados en el data set
+
+label = preprocessing.LabelEncoder()
+censo_df_Data['CTYNAME'] = label.fit_transform(censo_df_Data['CTYNAME'].astype(str))
+censo_df_Data['STNAME'] = label.fit_transform(censo_df_Data['STNAME'].astype(str))
+
+# Visualización de los datos
+censo_df_Data
+
+colormap = plt.cm.viridis
+plt.figure(figsize=(10,10))
+plt.title('Matriz de correlacion Pearson, del censo en Estados Unidos 2010-2015')
+sb.heatmap(censo_df_Data.astype(float).corr(),
+           vmax=1.0,
+           cmap=colormap,
+           annot=True,
+           linewidths=0.1,
+           linecolor='white',
+           square=True)
+
+colormap = plt.cm.viridis
+plt.figure(figsize=(10,10))
+plt.title('Matriz de correlacion Pearson, del censo en Estados Unidos 2010-2015')
+sb.heatmap(censo_df_Data.iloc[:,12:].astype(float).corr(),
+           vmax=1.0,
+           cmap=colormap,
+           annot=True,
+           linewidths=0.1,
+           linecolor='white',
+           square=True)
+
+"""### *Análisis de las variables: estado, población, tasa de nacimiento*"""
+
+# Se eliminan las columnas con las que no se va a trabajar
+# Las columnas seleccionadas para trabajar son STNAME	POPESTIMATE	RBIRTHS
+
+censo_df_Data1=censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY', 'CTYNAME',
        'CENSUS2010POP', 'ESTIMATESBASE2010', 'NPOPCHG_2010', 'NPOPCHG_2011',
        'NPOPCHG_2012', 'NPOPCHG_2013', 'NPOPCHG_2014', 'NPOPCHG_2015',
-       'BIRTHS2010', 'BIRTHS2011', 'BIRTHS2012', 'BIRTHS2013', 'BIRTHS2014',
-       'BIRTHS2015', 'DEATHS2010', 'DEATHS2011', 'DEATHS2012', 'DEATHS2013',
+       'DEATHS2010', 'DEATHS2011', 'DEATHS2012', 'DEATHS2013',
        'DEATHS2014', 'DEATHS2015', 'NATURALINC2010', 'NATURALINC2011',
        'NATURALINC2012', 'NATURALINC2013', 'NATURALINC2014', 'NATURALINC2015',
        'INTERNATIONALMIG2010', 'INTERNATIONALMIG2011', 'INTERNATIONALMIG2012',
@@ -130,45 +191,493 @@ censo_df_Data=censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY',
 # se asigna un número a cada ciudad de los 3193 ciudades registrados en el data set
 
 label = preprocessing.LabelEncoder()
-censo_df_Data['STNAME'] = label.fit_transform(censo_df_Data['STNAME'].astype(str))
-censo_df_Data['CTYNAME'] = label.fit_transform(censo_df_Data['CTYNAME'].astype(str))
+censo_df_Data1['STNAME'] = label.fit_transform(censo_df_Data1['STNAME'].astype(str))
 
-censo_df_Data.head()
-
-censo_df_Data.iloc[:, 2:8]
+# Visualización de los datos
+censo_df_Data1
 
 # Se hace un promedio de la población por cada fila de todos los datos en los 6 años desde el 2010 hasta el 2015
 
+lstprom1 =[]
+for i in censo_df_Data1.index:
+  prom = 0
+  for j in range (1,7):
+    s = censo_df_Data1.iloc[i][j]
+    #out = re.sub(r'[^\w\s]','',s)
+    prom += int(s)
+  prom = prom/6
+  lstprom1.append(prom)
+#arrprom = np.array(lstprom)
+promPOPESTIMATE = pd.DataFrame( lstprom1, columns = ['POPESTIMATE'])
+
+lstprom2 =[]
+for i in censo_df_Data1.index:
+  prom = 0
+  for j in range (7,13):
+    s = censo_df_Data1.iloc[i][j]
+    #out = re.sub(r'[^\w\s]','',s)
+    prom += int(s)
+  prom = prom/6
+  lstprom2.append(prom)
+#arrprom = np.array(lstprom)
+promBIRTH = pd.DataFrame( lstprom2, columns = ['BIRTH'])
+
+censo_df_Data1=pd.concat([censo_df_Data1.iloc[:,0:1], promPOPESTIMATE, promBIRTH], axis = 1)
+censo_df_Data1
+
+fig = px.scatter_3d(censo_df_Data1.dropna(), x="STNAME", y="POPESTIMATE", z="BIRTH")
+fig.show()
+
+colormap = plt.cm.viridis
+plt.figure(figsize=(10,10))
+plt.title('Matriz de correlacion Pearson, del censo en Estados Unidos 2010-2015')
+sb.heatmap(censo_df_Data1.astype(float).corr(),
+           vmax=1.0,
+           cmap=colormap,
+           annot=True,
+           linewidths=0.1,
+           linecolor='white',
+           square=True)
+
+"""Como se puede observar tanto del grafico de dispersión y de la matriz de correlación de Pearson, vemos que estas variables tienen una correlación alta, y estan aglomeradas en una gran grupo, el cual se encuentra muy cercano al origen. También se puede notar la precensia de datos que estan mas dispersos.
+
+### *Análisis de las variables: estado, ciudad y muertes*
+"""
+
+# Se eliminan las columnas con las que no se va a trabajar
+# Las columnas seleccionadas para trabajar son STNAME	CTYNAME	DEATHS201x
+
+censo_df_Data2=censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY',
+       'CENSUS2010POP', 'ESTIMATESBASE2010', 'POPESTIMATE2010',
+       'POPESTIMATE2011', 'POPESTIMATE2012', 'POPESTIMATE2013',
+       'POPESTIMATE2014', 'POPESTIMATE2015', 'NPOPCHG_2010', 'NPOPCHG_2011',
+       'NPOPCHG_2012', 'NPOPCHG_2013', 'NPOPCHG_2014', 'NPOPCHG_2015',
+       'BIRTHS2010', 'BIRTHS2011', 'BIRTHS2012', 'BIRTHS2013', 'BIRTHS2014',
+       'BIRTHS2015', 'NATURALINC2010', 'NATURALINC2011',
+       'NATURALINC2012', 'NATURALINC2013', 'NATURALINC2014', 'NATURALINC2015',
+       'INTERNATIONALMIG2010', 'INTERNATIONALMIG2011', 'INTERNATIONALMIG2012',
+       'INTERNATIONALMIG2013', 'INTERNATIONALMIG2014', 'INTERNATIONALMIG2015',
+       'DOMESTICMIG2010', 'DOMESTICMIG2011', 'DOMESTICMIG2012',
+       'DOMESTICMIG2013', 'DOMESTICMIG2014', 'DOMESTICMIG2015', 'NETMIG2010',
+       'NETMIG2011', 'NETMIG2012', 'NETMIG2013', 'NETMIG2014', 'NETMIG2015',
+       'RESIDUAL2010', 'RESIDUAL2011', 'RESIDUAL2012', 'RESIDUAL2013',
+       'RESIDUAL2014', 'RESIDUAL2015', 'GQESTIMATESBASE2010',
+       'GQESTIMATES2010', 'GQESTIMATES2011', 'GQESTIMATES2012',
+       'GQESTIMATES2013', 'GQESTIMATES2014', 'GQESTIMATES2015', 'RBIRTH2011',
+       'RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014', 'RBIRTH2015', 'RDEATH2011',
+       'RDEATH2012', 'RDEATH2013', 'RDEATH2014', 'RDEATH2015',
+       'RNATURALINC2011', 'RNATURALINC2012', 'RNATURALINC2013',
+       'RNATURALINC2014', 'RNATURALINC2015', 'RINTERNATIONALMIG2011',
+       'RINTERNATIONALMIG2012', 'RINTERNATIONALMIG2013',
+       'RINTERNATIONALMIG2014', 'RINTERNATIONALMIG2015', 'RDOMESTICMIG2011',
+       'RDOMESTICMIG2012', 'RDOMESTICMIG2013', 'RDOMESTICMIG2014',
+       'RDOMESTICMIG2015', 'RNETMIG2011', 'RNETMIG2012', 'RNETMIG2013',
+       'RNETMIG2014', 'RNETMIG2015'],axis=1)
+
+# Se asigna un número a cada estado de los 51 estados registrados en el data set
+# se asigna un número a cada ciudad de los 3193 ciudades registrados en el data set
+
+label = preprocessing.LabelEncoder()
+censo_df_Data2['STNAME'] = label.fit_transform(censo_df_Data2['STNAME'].astype(str))
+censo_df_Data2['CTYNAME'] = label.fit_transform(censo_df_Data2['CTYNAME'].astype(str))
+
+# Visualización de los datos
+censo_df_Data2
+
+# Se hace un promedio de las muertes por cada fila de todos los datos en los 6 años desde el 2010 hasta el 2015
+
 lstprom =[]
-for i in censo_df_Data.index:
+for i in censo_df_Data2.index:
   prom = 0
   for j in range (2,8):
-    s = censo_df_Data.iloc[i][j]
+    s = censo_df_Data2.iloc[i][j]
     #out = re.sub(r'[^\w\s]','',s)
     prom += int(s)
   prom = prom/6
   lstprom.append(prom)
 #arrprom = np.array(lstprom)
-promPOPESTIMATE = pd.DataFrame( lstprom, columns = ['POPESTIMATE'])
+promDEATHS = pd.DataFrame( lstprom, columns = ['DEATHS'])
 
-promPOPESTIMATE.head()
+censo_df_Data2=pd.concat([censo_df_Data2.iloc[:,0:2], promDEATHS], axis = 1)
+censo_df_Data2
 
-pd.concat([censo_df_Data, promPOPESTIMATE], axis = 1)
+fig = px.scatter_3d(censo_df_Data2.dropna(), x="STNAME", y="CTYNAME", z="DEATHS")
+fig.show()
 
-lstprom =[]
-for i in censo_df.index:
-  prom = 0
-  for j in range (70,75):
-    s = censo_df.iloc[i][j]
-    out = re.sub(r'[^\w\s]','',s)
-    prom += int(out)
-  prom = prom/5
-  lstprom.append(prom)
-promRBIRTH=pd.DataFrame(lstprom, columns = ['PromRBIRTH'])
-censo_df_Data = pd.concat([censo_df_Data, promRBIRTH], axis = 1)
-censo_df_Data
+"""Al igual que el anterior analisis, los datos se encuentran muy agrupados en un solo grupo muy grande, y con otros datos que estan dispersos.
 
-"""gráficas de dispersión"""
+### *Análisis del promedio dentro de tres año 2010, 2011 y 2012*
+"""
+
+censo_df_tresanos = censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY', 'STNAME', 'CTYNAME',
+       'CENSUS2010POP', 'ESTIMATESBASE2010', 'POPESTIMATE2013',
+       'POPESTIMATE2014', 'POPESTIMATE2015', 'NPOPCHG_2010', 'NPOPCHG_2011',
+       'NPOPCHG_2012', 'NPOPCHG_2013', 'NPOPCHG_2014', 'NPOPCHG_2015',
+       'BIRTHS2013', 'BIRTHS2014',
+       'BIRTHS2015',  'DEATHS2013',
+       'DEATHS2014', 'DEATHS2015', 'NATURALINC2010', 'NATURALINC2011',
+       'NATURALINC2012', 'NATURALINC2013', 'NATURALINC2014', 'NATURALINC2015',
+       'INTERNATIONALMIG2010', 'INTERNATIONALMIG2011', 'INTERNATIONALMIG2012',
+       'INTERNATIONALMIG2013', 'INTERNATIONALMIG2014', 'INTERNATIONALMIG2015',
+       'DOMESTICMIG2010', 'DOMESTICMIG2011', 'DOMESTICMIG2012',
+       'DOMESTICMIG2013', 'DOMESTICMIG2014', 'DOMESTICMIG2015', 'NETMIG2010',
+       'NETMIG2011', 'NETMIG2012', 'NETMIG2013', 'NETMIG2014', 'NETMIG2015',
+       'RESIDUAL2010', 'RESIDUAL2011', 'RESIDUAL2012', 'RESIDUAL2013',
+       'RESIDUAL2014', 'RESIDUAL2015', 'GQESTIMATESBASE2010',
+       'GQESTIMATES2010', 'GQESTIMATES2011', 'GQESTIMATES2012',
+       'GQESTIMATES2013', 'GQESTIMATES2014', 'GQESTIMATES2015', 'RBIRTH2011',
+       'RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014', 'RBIRTH2015', 'RDEATH2011',
+       'RDEATH2012', 'RDEATH2013', 'RDEATH2014', 'RDEATH2015',
+       'RNATURALINC2011', 'RNATURALINC2012', 'RNATURALINC2013',
+       'RNATURALINC2014', 'RNATURALINC2015', 'RINTERNATIONALMIG2011',
+       'RINTERNATIONALMIG2012', 'RINTERNATIONALMIG2013',
+       'RINTERNATIONALMIG2014', 'RINTERNATIONALMIG2015', 'RDOMESTICMIG2011',
+       'RDOMESTICMIG2012', 'RDOMESTICMIG2013', 'RDOMESTICMIG2014',
+       'RDOMESTICMIG2015', 'RNETMIG2011', 'RNETMIG2012', 'RNETMIG2013',
+       'RNETMIG2014', 'RNETMIG2015'],axis=1)
+censo_df_tresanos
+
+#Promedio de la población, naciemiento y muertes en los años 2010, 2011 y 2012 
+poblacion = censo_df_tresanos.drop(['BIRTHS2010','BIRTHS2011','BIRTHS2012','DEATHS2010','DEATHS2011','DEATHS2012'],axis=1)
+poblacion['PromedioPoblacion2010-2012'] = poblacion.mean(axis=1)
+poblacion
+
+nacimientos = censo_df_tresanos.drop(['POPESTIMATE2010','POPESTIMATE2011', 'POPESTIMATE2012'	,'DEATHS2010','DEATHS2011','DEATHS2012'],axis=1)
+nacimientos['PromedioNacimientos2010-2012'] = nacimientos.mean(axis=1)
+nacimientos
+
+muertes = censo_df_tresanos.drop(['POPESTIMATE2010','POPESTIMATE2011', 'POPESTIMATE2012','BIRTHS2010',	'BIRTHS2011',	'BIRTHS2012'],axis=1)
+muertes['PromedioMuertes2010-2012'] = muertes.mean(axis=1)
+muertes
+
+promedios2010_2012 = pd.concat([poblacion['PromedioPoblacion2010-2012'],nacimientos['PromedioNacimientos2010-2012'],muertes['PromedioMuertes2010-2012']],axis=1)
+promedios2010_2012
+
+# Visualizar el promedio de los tres años 
+fig = px.scatter_3d(promedios2010_2012.dropna(),x="PromedioPoblacion2010-2012", y='PromedioNacimientos2010-2012', z='PromedioMuertes2010-2012')
+fig.show()
+
+"""Al observar nuevamente el comportamiento del dataset, vemos que presentan una relación lineal, con una concentración de datos muy elevedad en el origen y con una gran dispersión a valores más elevados
+
+### *Promedio de los años 2011-2015 de la tasa de muertes y la tasa de nacimientos.*
+"""
+
+censo_df_prom = censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY',  'CTYNAME',
+       'CENSUS2010POP', 'ESTIMATESBASE2010', 'POPESTIMATE2010',
+       'POPESTIMATE2011', 'POPESTIMATE2012', 'POPESTIMATE2013',
+       'POPESTIMATE2014', 'POPESTIMATE2015', 'NPOPCHG_2010', 'NPOPCHG_2011',
+       'NPOPCHG_2012', 'NPOPCHG_2013', 'NPOPCHG_2014', 'NPOPCHG_2015',
+       'BIRTHS2010', 'BIRTHS2011', 'BIRTHS2012', 'BIRTHS2013', 'BIRTHS2014',
+       'BIRTHS2015', 'DEATHS2010', 'DEATHS2011', 'DEATHS2012', 'DEATHS2013',
+       'DEATHS2014', 'DEATHS2015', 'NATURALINC2010', 'NATURALINC2011',
+       'NATURALINC2012', 'NATURALINC2013', 'NATURALINC2014', 'NATURALINC2015',
+       'INTERNATIONALMIG2010', 'INTERNATIONALMIG2011', 'INTERNATIONALMIG2012',
+       'INTERNATIONALMIG2013', 'INTERNATIONALMIG2014', 'INTERNATIONALMIG2015',
+       'DOMESTICMIG2010', 'DOMESTICMIG2011', 'DOMESTICMIG2012',
+       'DOMESTICMIG2013', 'DOMESTICMIG2014', 'DOMESTICMIG2015', 'NETMIG2010',
+       'NETMIG2011', 'NETMIG2012', 'NETMIG2013', 'NETMIG2014', 'NETMIG2015',
+       'RESIDUAL2010', 'RESIDUAL2011', 'RESIDUAL2012', 'RESIDUAL2013',
+       'RESIDUAL2014', 'RESIDUAL2015', 'GQESTIMATESBASE2010',
+       'GQESTIMATES2010', 'GQESTIMATES2011', 'GQESTIMATES2012',
+       'GQESTIMATES2013', 'GQESTIMATES2014', 'GQESTIMATES2015', 
+       'RNATURALINC2011', 'RNATURALINC2012', 'RNATURALINC2013',
+       'RNATURALINC2014', 'RNATURALINC2015', 'RINTERNATIONALMIG2011',
+       'RINTERNATIONALMIG2012', 'RINTERNATIONALMIG2013',
+       'RINTERNATIONALMIG2014', 'RINTERNATIONALMIG2015', 'RDOMESTICMIG2011',
+       'RDOMESTICMIG2012', 'RDOMESTICMIG2013', 'RDOMESTICMIG2014',
+       'RDOMESTICMIG2015', 'RNETMIG2011', 'RNETMIG2012', 'RNETMIG2013',
+       'RNETMIG2014', 'RNETMIG2015'],axis=1)
+censo_df_prom
+
+# Se asigna un número a cada estado de los 51 estados registrados en el data set
+# se asigna un número a cada ciudad de los 3193 ciudades registrados en el data set
+
+label = preprocessing.LabelEncoder()
+censo_df_prom['STNAME'] = label.fit_transform(censo_df_Data['STNAME'].astype(str))
+censo_df_prom
+
+#Promedio de la naciemiento y muertes en los años 2011, 2012, 2013, 2014 y 2015 
+prom_tasa_muertes = censo_df_prom.drop(['RBIRTH2011','RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014','RBIRTH2015','STNAME'],axis=1)
+prom_tasa_muertes['PromedioTasaMuertes2011-2015'] = prom_tasa_muertes.mean(axis=1)
+prom_tasa_muertes
+
+prom_tasa_nacimientos = censo_df_prom.drop(['RDEATH2011',	'RDEATH2012',	'RDEATH2013',	'RDEATH2014',	'RDEATH2015','STNAME'],axis=1)
+prom_tasa_nacimientos['PromedioTasaNacimientos2011-2015'] = prom_tasa_nacimientos.mean(axis=1)
+prom_tasa_nacimientos
+
+data2011_2015 = pd.concat([censo_df_prom['STNAME'],prom_tasa_muertes['PromedioTasaMuertes2011-2015'],prom_tasa_nacimientos['PromedioTasaNacimientos2011-2015']],axis=1)
+data2011_2015
+
+# Visualizar el promedio de los cinco años 
+fig = px.scatter_3d(data2011_2015.dropna(),x='STNAME', y='PromedioTasaMuertes2011-2015', z='PromedioTasaNacimientos2011-2015')
+fig.show()
+
+"""### *Promedio de las  tasas de nacimientos, muertes y  NATURALINC de los años 2011-2015 .*"""
+
+censo_df_tasa = censo_df.drop(['SUMLEV', 'REGION', 'DIVISION', 'STATE', 'COUNTY', 'STNAME', 'CTYNAME',
+       'CENSUS2010POP', 'ESTIMATESBASE2010', 'POPESTIMATE2010',
+       'POPESTIMATE2011', 'POPESTIMATE2012', 'POPESTIMATE2013',
+       'POPESTIMATE2014', 'POPESTIMATE2015', 'NPOPCHG_2010', 'NPOPCHG_2011',
+       'NPOPCHG_2012', 'NPOPCHG_2013', 'NPOPCHG_2014', 'NPOPCHG_2015',
+       'BIRTHS2010', 'BIRTHS2011', 'BIRTHS2012', 'BIRTHS2013', 'BIRTHS2014',
+       'BIRTHS2015', 'DEATHS2010', 'DEATHS2011', 'DEATHS2012', 'DEATHS2013',
+       'DEATHS2014', 'DEATHS2015', 'NATURALINC2010', 'NATURALINC2011',
+       'NATURALINC2012', 'NATURALINC2013', 'NATURALINC2014', 'NATURALINC2015',
+       'INTERNATIONALMIG2010', 'INTERNATIONALMIG2011', 'INTERNATIONALMIG2012',
+       'INTERNATIONALMIG2013', 'INTERNATIONALMIG2014', 'INTERNATIONALMIG2015',
+       'DOMESTICMIG2010', 'DOMESTICMIG2011', 'DOMESTICMIG2012',
+       'DOMESTICMIG2013', 'DOMESTICMIG2014', 'DOMESTICMIG2015', 'NETMIG2010',
+       'NETMIG2011', 'NETMIG2012', 'NETMIG2013', 'NETMIG2014', 'NETMIG2015',
+       'RESIDUAL2010', 'RESIDUAL2011', 'RESIDUAL2012', 'RESIDUAL2013',
+       'RESIDUAL2014', 'RESIDUAL2015', 'GQESTIMATESBASE2010',
+       'GQESTIMATES2010', 'GQESTIMATES2011', 'GQESTIMATES2012',
+       'GQESTIMATES2013', 'GQESTIMATES2014', 'GQESTIMATES2015', 'RINTERNATIONALMIG2011',
+       'RINTERNATIONALMIG2012', 'RINTERNATIONALMIG2013',
+       'RINTERNATIONALMIG2014', 'RINTERNATIONALMIG2015', 'RDOMESTICMIG2011',
+       'RDOMESTICMIG2012', 'RDOMESTICMIG2013', 'RDOMESTICMIG2014',
+       'RDOMESTICMIG2015', 'RNETMIG2011', 'RNETMIG2012', 'RNETMIG2013',
+       'RNETMIG2014', 'RNETMIG2015'],axis=1)
+censo_df_tasa
+
+"""'RBIRTH2011',
+       'RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014', 'RBIRTH2015', 'RDEATH2011',
+       'RDEATH2012', 'RDEATH2013', 'RDEATH2014', 'RDEATH2015',
+       'RNATURALINC2011', 'RNATURALINC2012', 'RNATURALINC2013',
+       'RNATURALINC2014', 'RNATURALINC2015',
+"""
+
+#Promedio de la naciemiento, muertes y NATURALINC en los años 2011, 2012, 2013, 2014 y 2015 
+prom_tasa_muertes = censo_df_tasa.drop(['RBIRTH2011','RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014','RBIRTH2015','RNATURALINC2011', 'RNATURALINC2012', 'RNATURALINC2013', 'RNATURALINC2014', 'RNATURALINC2015'],axis=1)
+prom_tasa_muertes['PromedioTasaMuertes2011-2015'] = prom_tasa_muertes.mean(axis=1)
+prom_tasa_muertes
+
+prom_tasa_nacimientos = censo_df_tasa.drop(['RDEATH2011',	'RDEATH2012',	'RDEATH2013',	'RDEATH2014',	'RDEATH2015','RNATURALINC2011', 'RNATURALINC2012', 'RNATURALINC2013', 'RNATURALINC2014', 'RNATURALINC2015'],axis=1)
+prom_tasa_nacimientos['PromedioTasaNacimientos2011-2015'] = prom_tasa_nacimientos.mean(axis=1)
+prom_tasa_nacimientos
+
+prom_tasa_Naturalinc = censo_df_tasa.drop(['RBIRTH2011', 'RBIRTH2012', 'RBIRTH2013', 'RBIRTH2014', 'RBIRTH2015', 'RDEATH2011', 'RDEATH2012', 'RDEATH2013', 'RDEATH2014', 'RDEATH2015'],axis=1)
+prom_tasa_Naturalinc['PromedioTasaNaturalinc2011-2015'] = prom_tasa_Naturalinc.mean(axis=1)
+prom_tasa_Naturalinc
+
+data_tasa_2011_2015 = pd.concat([prom_tasa_Naturalinc['PromedioTasaNaturalinc2011-2015'],prom_tasa_muertes['PromedioTasaMuertes2011-2015'],prom_tasa_nacimientos['PromedioTasaNacimientos2011-2015']],axis=1)
+data_tasa_2011_2015
+
+# Visualizar el promedio de los cinco años
+fig = px.scatter_3d(data_tasa_2011_2015.dropna(),x='PromedioTasaNaturalinc2011-2015', y='PromedioTasaMuertes2011-2015', z='PromedioTasaNacimientos2011-2015')
+fig.show()
+
+"""## 4. Metodos para establecer el número de clusteres"""
+
+#Base de datos a la cual se va a realizar el clustering
+#base_datos = promedios2010_2012 # Al realizar los metodos de clustering con estos datos, vemos que tiende a aglomerarce en un solo cluster, el cual contiene la gran mayoria de los datos. 
+base_datos = data_tasa_2011_2015
+#base_datos = data2011_2015
+
+# Metodo 1: Curva de codo 
+maxClusters = 10
+def elbow_curve(data, maxClusters = 15):
+
+  # rango de valores del parámetro a optimizar (cantidad de clusters)
+  maxClusters = range(1, maxClusters + 1)
+  inertias = []
+
+  # se ejecuta el modelo para el rango de clusters y se guarda la inercia
+  # respectiva obtenida para cada valor
+  for k in maxClusters:
+    kmeanModel = KMeans(n_clusters = k)
+    kmeanModel.fit(base_datos)
+    inertias.append(kmeanModel.inertia_)
+
+  # Grafico de los resultados obtenidos para cada valor del rango
+  print("Valores: ",inertias)
+  plt.figure(figsize=(10, 8))
+  plt.plot(maxClusters, inertias, 'bx-')
+  plt.xlabel('k')
+  plt.ylabel('Inertia')
+  plt.title('The Elbow Method showing the optimal k')
+  plt.show()
+
+elbow_curve(base_datos, maxClusters = 10)
+
+#Metodo 2: estadístico de GAP
+# nrefs es la cantidad de datos ("datasets") de referencia contra los que se va a comparar
+def optimalK(data, nrefs=3, maxClusters=15):
+
+    gaps = np.zeros((len(range(1, maxClusters+1)),))
+    resultsdf = pd.DataFrame({'clusterCount':[], 'gap':[]})
+    for gap_index, k in enumerate(range(1, maxClusters+1)):
+
+        # guardara los resultados de dispersión de cada distribución simulada
+        refDisps = np.zeros(nrefs)
+
+        # Genera las muestras aleatorias indicadas con nrefs y ejecuta k-means
+        # en cada bucle obteniendo los resultados de dispersión (inercia)
+        # para cada conjunto generado.
+        for i in range(nrefs):
+            
+            # Crea nuevo conjunto aleatorio de referencia
+            # Se puede usar una semilla para tener reproducibilidad
+            np.random.seed(0)
+            randomReference = np.random.random_sample(size=data.shape)
+            
+            # se ajusta el modelo al conjunto de referencia
+            km = KMeans(k)
+            km.fit(randomReference)
+            # se guarda la dispersión obtenida
+            refDisp = km.inertia_
+            refDisps[i] = refDisp
+
+        # Se ajusta el modelo a los datos originales y se guarda su inercia
+        km = KMeans(k)
+        km.fit(data)
+        
+        origDisp = km.inertia_
+
+        # Calcula el estadístico de gap para k clusters usando el promedio de
+        # las dispersiones de los datos simulados y la dispersión de los datos originales.
+        gap = np.log(np.mean(refDisps)) - np.log(origDisp)
+
+        # Guarda el estadístico de gap obtenido en este bucle.
+        gaps[gap_index] = gap
+        
+        resultsdf = resultsdf.append({'clusterCount':k, 'gap':gap}, ignore_index=True)
+
+    # Selecciona el "primer máximo" de los estadísticos obtenidos y devuelve 
+    # su respectivo número de clusters    
+    for i in range(0, len(gaps)-1):
+      if gaps[i+1] <= gaps[i]:
+        return (i+1, resultsdf)
+    return (len(gaps), resultsdf)
+    #return (gaps.argmax() + 1, resultsdf)  # Plus 1 because index of 0 means 1 cluster is optimal, index 2 = 3 clusters are optimal
+
+k, gapdf = optimalK(base_datos, nrefs=5, maxClusters=10)
+print('La cantidad óptima de clusters es: ', k)
+
+plt.figure(figsize=(16,8))
+plt.plot(gapdf['clusterCount'], gapdf['gap'], linestyle='--', marker='o', color='b');
+plt.xlabel('K');
+plt.ylabel('Gap Statistic');
+plt.title('Gap Statistic vs. K');
+
+#Metodo 3: coeficiente de silueta
+from sklearn.metrics import silhouette_samples, silhouette_score
+import matplotlib.cm as cm
+
+colors_k_means = ['cyan','purple','orange']
+range_n_clusters = [2, 3, 4, 5, 6]
+X = np.array(base_datos)
+
+for n_clusters in range_n_clusters:
+    # Create a subplot with 1 row and 2 columns
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    fig.set_size_inches(19, 4)
+
+    # The 1st subplot is the silhouette plot
+    # The silhouette coefficient can range from -1, 1 but in this example all
+    # lie within [-0.1, 1]
+    ax1.set_xlim([-0.1, 1])
+    # The (n_clusters+1)*10 is for inserting blank space between silhouette
+    # plots of individual clusters, to demarcate them clearly.
+    ax1.set_ylim([0, len(X) + (n_clusters + 1) * 10])
+
+    # Initialize the clusterer with n_clusters value and a random generator
+    # seed of 10 for reproducibility.
+    clusterer = KMeans(n_clusters=n_clusters, random_state=10)
+    cluster_labels = clusterer.fit_predict(X)
+
+    # The silhouette_score gives the average value for all the samples.
+    # This gives a perspective into the density and separation of the formed
+    # clusters
+    silhouette_avg = silhouette_score(X, cluster_labels)
+    print("For n_clusters =", n_clusters,
+          "The average silhouette_score is :", silhouette_avg)
+
+    # Compute the silhouette scores for each sample
+    sample_silhouette_values = silhouette_samples(X, cluster_labels)
+
+    y_lower = 10
+    for i in range(n_clusters):
+        # Aggregate the silhouette scores for samples belonging to
+        # cluster i, and sort them
+        ith_cluster_silhouette_values = \
+            sample_silhouette_values[cluster_labels == i]
+
+        ith_cluster_silhouette_values.sort()
+
+        size_cluster_i = ith_cluster_silhouette_values.shape[0]
+        y_upper = y_lower + size_cluster_i
+
+        color = plt.cm.nipy_spectral(float(i) / n_clusters)
+        ax1.fill_betweenx(np.arange(y_lower, y_upper),
+                          0, ith_cluster_silhouette_values,
+                          facecolor=color, edgecolor=color, alpha=0.7)
+
+        # Label the silhouette plots with their cluster numbers at the middle
+        ax1.text(-0.05, y_lower + 0.5 * size_cluster_i, str(i))
+
+        # Compute the new y_lower for next plot
+        y_lower = y_upper + 10  # 10 for the 0 samples
+
+    ax1.set_title("The silhouette plot for the various clusters.")
+    ax1.set_xlabel("The silhouette coefficient values")
+    ax1.set_ylabel("Cluster label")
+
+    # The vertical line for average silhouette score of all the values
+    ax1.axvline(x=silhouette_avg, color="red", linestyle="--")
+
+    ax1.set_yticks([])  # Clear the yaxis labels / ticks
+    ax1.set_xticks([-0.1, 0, 0.2, 0.4, 0.6, 0.8, 1])
+
+    # 2nd Plot showing the actual clusters formed
+    colors = plt.cm.nipy_spectral(cluster_labels.astype(float) / n_clusters)
+    ax2.scatter(X[:, 0], X[:, 1], marker='.', s=30, lw=0, alpha=0.7,
+                c=colors, edgecolor='k')
+
+    # Labeling the clusters
+    centers = clusterer.cluster_centers_
+    # Draw white circles at cluster centers
+    ax2.scatter(centers[:, 0], centers[:, 1], marker='o',
+                c="white", alpha=1, s=200, edgecolor='k')
+
+    for i, c in enumerate(centers):
+        ax2.scatter(c[0], c[1], marker='$%d$' % i, alpha=1,
+                    s=50, edgecolor='k')
+
+    ax2.set_title("The visualization of the clustered data.")
+    ax2.set_xlabel("Feature space for the 1st feature")
+    ax2.set_ylabel("Feature space for the 2nd feature")
+
+    plt.suptitle(("Silhouette analysis for KMeans clustering on sample data "
+                  "with n_clusters = %d" % n_clusters),
+                 fontsize=14, fontweight='bold')
+
+plt.show()
+
+"""## 5. Agrupamiento Jeraárquico
+
+### Dendrograma
+Debido a la observación de datos.
+"""
+
+import scipy.cluster.hierarchy as shc
+from matplotlib import pyplot
+pyplot.figure(figsize=(15, 7))  
+pyplot.title("Dendrograma") 
+censo_df_Data_USE = base_datos.drop(['PromedioTasaNaturalinc2011-2015'],axis=1) 
+dend = shc.dendrogram(shc.linkage(censo_df_Data_USE, method='ward'),truncate_mode='level',p=3)
+
+pyplot.figure(figsize=(15, 7))  
+pyplot.title("Dendrograma") 
+dend = shc.dendrogram(shc.linkage(base_datos, method='ward'),truncate_mode='level',p=3)
+
+"""## 6. Análisis de Resultados """
+
+print(censo_df.groupby('STNAME').size())
+
+arrayState = np.array(censo_df['STNAME'].unique())
+print(len(arrayState))
+arrayCity = np.array(censo_df['CTYNAME'].unique())
+print(len(arrayCity))
 
 # Se va a realizar el gráfico de dispersión de la estimación de la población durante los cinco años 
 sb.pairplot(censo_df.dropna(),
@@ -189,20 +698,3 @@ sb.pairplot(censo_df.dropna(),
        'POPESTIMATE2014', 'POPESTIMATE2015'],
             kind='scatter')
 plt.show()
-
-"""## Metodos para establecer el número de clusteres"""
-
-
-
-"""## Agrupamiento Jeraárquico"""
-
-
-
-"""## Análisis de Resultados """
-
-print(censo_df.groupby('STNAME').size())
-
-arrayState = np.array(censo_df['STNAME'].unique())
-print(len(arrayState))
-arrayCity = np.array(censo_df['CTYNAME'].unique())
-print(len(arrayCity))
